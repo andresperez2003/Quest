@@ -1,17 +1,21 @@
-app = 'quest-tqgcig'
-primary_region = 'iad'
+# fly.toml app configuration file generated for quest-0lyzga on 2026-10-19T22:47:06Z
+#
+# See https://fly.io/docs/reference/configuration/ for information about how to use this file.
+#
+
+app = 'quest-0lyzga'
+primary_region = 'ams'
 
 [build]
 
 [env]
+  APP_URL = 'https://quest-tqgcig.fly.dev'
+  DATABASE_URL = 'file:/data/quest.db'
+  GOOGLE_REDIRECT_URI = 'https://quest-tqgcig.fly.dev/api/google/callback'
   NODE_ENV = 'production'
   PORT = '8080'
-  DATABASE_URL = 'file:/data/quest.db'
-  APP_URL = 'https://quest-tqgcig.fly.dev'
-  GOOGLE_REDIRECT_URI = 'https://quest-tqgcig.fly.dev/api/google/callback'
 
-# Disco persistente para SQLite: sobrevive a despliegues y reinicios.
-[mounts]
+[[mounts]]
   source = 'quest_data'
   destination = '/data'
 
@@ -23,11 +27,11 @@ primary_region = 'iad'
   min_machines_running = 0
 
   [[http_service.checks]]
-    grace_period = '10s'
     interval = '30s'
+    timeout = '5s'
+    grace_period = '10s'
     method = 'GET'
     path = '/api/health'
-    timeout = '5s'
 
 [[vm]]
   size = 'shared-cpu-1x'
