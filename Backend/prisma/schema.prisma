@@ -1,0 +1,193 @@
+// Modelo de datos de la app.
+// SQLite para desarrollo; para producción basta cambiar el provider a "postgresql".
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  name         String
+  passwordHash String
+  level        Int      @default(1)
+  xp           Int      @default(0)
+  coins        Int      @default(0)
+  streakFreezes Int     @default(0) // "congeladores" de racha
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  categories Category[]
+  tasks      Task[]
+  habits     Habit[]
+  pomodoros  PomodoroSession[]
+  activity   ActivityLog[]
+  gameEvents GameEvent[]
+  passwordResets PasswordReset[]
+  google     GoogleAccount?
+}
+
+model Category {
+  id        String   @id @default(cuid())
+  name      String
+  color     String   // hex, ej. "#22c55e"
+  icon      String   // emoji o nombre de ícono
+  createdAt DateTime @default(now())
+
+  userId String
+  user   User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tasks  Task[]
+  habits Habit[]
+
+  @@unique([userId, name])
+}
+
+model Task {
+  id            String   @id @default(cuid())
+  title         String
+  notes         String?
+  status        String   @default("pending") // pending | done | archived
+  priority      Int      @default(2)         // 1 alta, 2 media, 3 baja
+  energy        String?                      // low | medium | high
+  dueDay        String?                      // "YYYY-MM-DD" local; null = bandeja de entrada
+  dueTime       String?                      // "HH:MM" opcional
+  estimatedMin  Int?
+  completedDay  String?                      // día local en que se completó
+  completedAt   DateTime?
+  recurrence    String?                      // daily | weekdays | weekly:1,3,5 (1=lunes) | monthly
+  spawnedFromId String?                      // instancia recurrente anterior que generó esta
+  googleEventId String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  parentId String?
+  parent   Task?   @relation("Subtasks", fields: [parentId], references: [id], onDelete: Cascade)
+  subtasks Task[]  @relation("Subtasks")
+
+  categoryId String?
+  category   Category? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+
+  userId    String
+  user      User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  pomodoros PomodoroSession[]
+
+  @@index([userId, status])
+  @@index([userId, dueDay])
+}
+
+model Habit {
+  id          String   @id @default(cuid())
+  name        String
+  icon        String   @default("✅")
+  frequency   String   @default("daily") // daily | weekly
+  targetCount Int      @default(1)       // veces por periodo (ej. 3 veces/semana)
+  unit        String?                    // ej. "páginas", "vasos"
+  targetValue Int?                       // ej. 20 (páginas)
+  archived    Boolean  @default(false)
+  createdAt   DateTime @default(now())
+
+  categoryId String?
+  category   Category? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+
+  userId    String
+  user      User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  logs      HabitLog[]
+  pomodoros PomodoroSession[]
+}
+
+model HabitLog {
+  id    String @id @default(cuid())
+  day   String // día local del usuario, "YYYY-MM-DD"
+  value Int    @default(1)
+
+  habitId String
+  habit   Habit  @relation(fields: [habitId], references: [id], onDelete: Cascade)
+
+  @@unique([habitId, day])
+}
+
+model PomodoroSession {
+  id          String   @id @default(cuid())
+  day         String   // día local en que empezó, "YYYY-MM-DD"
+  startedAt   DateTime @default(now())
+  durationMin Int      // planificado
+  actualMin   Int      @default(0) // minutos de foco reales (sin pausas)
+  completed   Boolean  @default(false)
+
+  userId  String
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  taskId  String?
+  task    Task?   @relation(fields: [taskId], references: [id], onDelete: SetNull)
+  habitId String?
+  habit   Habit?  @relation(fields: [habitId], references: [id], onDelete: SetNull)
+
+  @@index([userId, day])
+  @@index([taskId])
+}
+
+// Cada acción que da puntos; alimenta el mapa de calor estilo GitHub.
+model ActivityLog {
+  id        String   @id @default(cuid())
+  day       String   // día local del usuario, "YYYY-MM-DD"
+  points    Int
+  source    String   // task | habit | pomodoro | achievement | surprise
+  sourceId  String?
+  createdAt DateTime @default(now())
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([source, sourceId])
+  @@index([userId, day])
+}
+
+// Hitos de la gamificación. Únicos por (userId, kind, key) para no repetirse nunca.
+// Enlace de "¿Olvidaste tu contraseña?". Solo se guarda el hash del token: con la BD no basta para usarlo.
+model PasswordReset {
+  id        String    @id @default(cuid())
+  tokenHash String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model GameEvent {
+  id        String   @id @default(cuid())
+  kind      String   // achievement | freeze_earned | freeze_used | surprise | medal | rank
+  key       String   // id del logro, día congelado, "lunes:nivel" de la medalla, clave del rango...
+  day       String   // día local en que ocurrió
+  value     Int      @default(0) // puntos otorgados, si aplica
+  createdAt DateTime @default(now())
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, kind, key])
+}
+
+// Conexión con Google Calendar. Los tokens se guardan cifrados (lib/crypto.js).
+model GoogleAccount {
+  id           String   @id @default(cuid())
+  email        String?
+  scope        String
+  accessToken  String
+  refreshToken String?
+  expiresAt    DateTime
+  timeZone     String   @default("UTC")
+  syncTasks    Boolean  @default(false) // enviar tareas con hora a Google (bidireccional)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  userId String @unique
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
