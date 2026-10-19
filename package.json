@@ -1,0 +1,13 @@
+{
+  "name": "quest",
+  "private": true,
+  "scripts": {
+    "dev": "concurrently -n api,web -c green,cyan \"npm run dev --prefix Backend\" \"npm run dev --prefix Frontend\"",
+    "build": "npm run build --prefix Frontend",
+    "db:migrate": "npm run db:migrate --prefix Backend",
+    "db:studio": "npm run db:studio --prefix Backend"
+  },
+  "devDependencies": {
+    "concurrently": "^10.0.6"
+  }
+}

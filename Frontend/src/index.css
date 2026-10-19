@@ -1,0 +1,61 @@
+@import "tailwindcss";
+
+@theme {
+  --color-bg: #0f172a;
+  --color-surface: #1e293b;
+  --color-border: #334155;
+  --color-muted: #94a3b8;
+  --color-accent: #22c55e;
+  --color-rest: #38bdf8;   /* descansos del pomodoro */
+  --color-event: #60a5fa;  /* eventos de Google Calendar */
+  --color-gold: #facc15;   /* XP, logros, medallas */
+  --font-sans: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --animate-float: float 3s ease-in-out infinite;
+
+  --animate-pop: pop 0.35s ease-out;
+  --animate-rise: rise 0.9s ease-out forwards;
+  --animate-sheet: sheet 0.2s ease-out;
+  --animate-shine: shine 3.5s ease-in-out infinite;
+
+  @keyframes float {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-4px); }
+  }
+  @keyframes pop {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.3); }
+    100% { transform: scale(1); }
+  }
+  @keyframes rise {
+    0% { opacity: 0; transform: translateY(0); }
+    20% { opacity: 1; }
+    100% { opacity: 0; transform: translateY(-28px); }
+  }
+  /* Destello que cruza la medalla; con reduced-motion termina fuera del disco y no se ve. */
+  @keyframes shine {
+    0% { transform: translateX(0) skewX(-20deg); }
+    45%, 100% { transform: translateX(150px) skewX(-20deg); }
+  }
+  @keyframes sheet {
+    from { opacity: 0; transform: translateY(16px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+}
+
+html,
+body,
+#root {
+  min-height: 100dvh;
+}
+
+body {
+  background: var(--color-bg);
+  color: #f1f5f9;
+}
