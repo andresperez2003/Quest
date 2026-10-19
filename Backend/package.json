@@ -4,11 +4,12 @@
   "type": "module",
   "scripts": {
     "dev": "node --watch --env-file=.env main.js",
-    "start": "node --env-file=.env main.js",
+    "start": "node --env-file-if-exists=.env main.js",
     "db:migrate": "prisma migrate dev",
     "db:studio": "prisma studio",
     "postinstall": "prisma generate",
-    "test": "node --test src"
+    "test": "node --test src",
+    "db:deploy": "prisma migrate deploy"
   },
   "dependencies": {
     "@prisma/client": "^6.19.3",
